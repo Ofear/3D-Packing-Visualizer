@@ -4,8 +4,8 @@
     "description": "3D Packing Visualization Tool",
     "start_url": "/index.html",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#4287f5",
+    "background_color": "#b8c5c7",
+    "theme_color": "#34aede",
     "orientation": "any",
     "icons": [
         {

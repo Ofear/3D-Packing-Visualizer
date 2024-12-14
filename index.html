@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4287f5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="PackViz">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Packing Visualizer</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <!-- Import Three.js -->
+    <script async src="https://unpkg.com/es-module-shims/dist/es-module-shims.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.159.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.159.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+        window.THREE = THREE;
+        window.OrbitControls = OrbitControls;
+        window.GLTFExporter = GLTFExporter;
+    </script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+            <div class="bg-white rounded-lg p-6 max-w-lg mx-auto mt-20 relative">
+                <h2 class="text-2xl font-bold mb-4">Settings</h2>
+                <button class="absolute top-4 right-4 text-gray-500 hover:text-gray-700" onclick="document.getElementById('settingsModal').classList.add('hidden')">×</button>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Language</label>
+                        <select id="language" class="w-full p-2 border rounded">
+                            <option value="en">English</option>
+                            <option value="he">עברית</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Default Unit</label>
+                        <select id="defaultUnit" class="w-full p-2 border rounded">
+                            <option value="mm">Millimeters (mm)</option>
+                            <option value="cm">Centimeters (cm)</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Surface Dimensions</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <input type="number" id="surfaceWidth" placeholder="Width" class="w-full p-2 border rounded">
+                                <label class="text-xs text-gray-500">Width</label>
+                            </div>
+                            <div>
+                                <input type="number" id="surfaceDepth" placeholder="Depth" class="w-full p-2 border rounded">
+                                <label class="text-xs text-gray-500">Depth</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Colors</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-xs text-gray-500">Item Color</label>
+                                <input type="color" id="itemColor" class="w-full p-1 border rounded">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500">Container Color</label>
+                                <input type="color" id="containerColor" class="w-full p-1 border rounded">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex justify-end space-x-4">
+                    <button class="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600" onclick="document.getElementById('settingsModal').classList.add('hidden')">Cancel</button>
+                    <button id="saveSettings" class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Save Settings</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- Left Panel: Configuration and Saved Items -->
+            <div class="space-y-8">
+                <!-- Scene Name Input -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <input type="text" id="sceneName" placeholder="Enter scene name" class="w-full p-2 border rounded mb-4">
+                    <button id="saveScene" class="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
+                        Save Scene
+                    </button>
+                </div>
+
+                <!-- Item Configuration -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold mb-4">Item Configuration</h2>
+                    <form id="packingForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Item Dimensions (mm)</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="number" id="itemWidth" placeholder="Width" value="95" class="w-full p-2 border rounded" required>
+                            <input type="number" id="itemDepth" placeholder="Depth" value="160" class="w-full p-2 border rounded" required>
+                            <input type="number" id="itemHeight" placeholder="Height" value="55" class="w-full p-2 border rounded" required>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Arrangement</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="number" id="rows" placeholder="Rows" min="1" value="3" class="w-full p-2 border rounded" required>
+                            <input type="number" id="columns" placeholder="Columns" min="1" value="3" class="w-full p-2 border rounded" required>
+                            <input type="number" id="layers" placeholder="Layers" min="1" value="2" class="w-full p-2 border rounded" required>
+                        </div>
+                    </div>
+                
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Container Gaps (mm)</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <input type="number" id="containerGapX" placeholder="X" value="5" class="w-full p-2 border rounded" required>
+                                <label class="text-xs text-gray-500">X Axis</label>
+                            </div>
+                            <div>
+                                <input type="number" id="containerGapY" placeholder="Y" value="5" class="w-full p-2 border rounded" required>
+                                <label class="text-xs text-gray-500">Y Axis</label>
+                            </div>
+                            <div>
+                                <input type="number" id="containerGapZ" placeholder="Z" value="5" class="w-full p-2 border rounded" required>
+                                <label class="text-xs text-gray-500">Z Axis</label>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Item Gaps (mm)</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <input type="number" id="itemGapX" placeholder="X" value="5" class="w-full p-2 border rounded" required>
+                                <label class="text-xs text-gray-500">X Axis</label>
+                            </div>
+                            <div>
+                                <input type="number" id="itemGapY" placeholder="Y" value="5" class="w-full p-2 border rounded" required>
+                                <label class="text-xs text-gray-500">Y Axis</label>
+                            </div>
+                            <div>
+                                <input type="number" id="itemGapZ" placeholder="Z" value="5" class="w-full p-2 border rounded" required>
+                                <label class="text-xs text-gray-500">Z Axis</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
+                        Update Visualization
+                    </button>
+                </form>
+                <div id="warnings" class="mt-4 p-4 bg-red-100 rounded hidden">
+                    <p class="text-red-700 text-sm"></p>
+                </div>
+            </div>
+
+            <!-- Saved Items Panel -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4">Saved Items</h2>
+                <div id="savedItems" class="space-y-2">
+                    <!-- Saved items will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Visualization -->
+        <div class="lg:col-span-3">
+            <div id="container" class="bg-white rounded-lg shadow-md" style="height: 600px;"></div>
+            
+            <div class="mt-4 flex justify-between items-center">
+                <button id="settingsBtn" class="bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700">
+                    Settings
+                </button>
+                <div class="flex space-x-4">
+                    <button id="downloadImage" class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
+                        Download Image
+                    </button>
+                    <button id="downloadScene" class="bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700">
+                        Download Scene
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript" src="./main.js">
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+                const form = document.getElementById('packingForm');
+                if (form) {
+                    form.dispatchEvent(new Event('submit'));
+                }
+            }, 100);
+    });
+</script>
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(registration => {
+                    console.log('ServiceWorker registration successful');
+                })
+                .catch(error => {
+                    console.log('ServiceWorker registration failed: ', error);
+                });
+        });
+    }
+</script>
+</body>
+</html>

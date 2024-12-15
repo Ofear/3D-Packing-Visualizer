@@ -1054,7 +1054,7 @@ class TranslationManager {
 
     async loadTranslations() {
         try {
-            const response = await fetch('/translations.json');
+            const response = await fetch('./translations.json');
             this.translations = await response.json();
             this.updatePageTranslations();
         } catch (error) {

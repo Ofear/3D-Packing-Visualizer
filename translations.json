@@ -1,0 +1,118 @@
+{
+    "en": {
+      "title": "3D Packing Visualizer",
+      "settings": {
+        "title": "Settings",
+        "language": "Language",
+        "defaultUnit": "Default Unit",
+        "surfaceDimensions": "Surface Dimensions (mm)",
+        "width": "Width",
+        "height": "Height",
+        "depth": "Depth",
+        "colors": "Colors",
+        "itemColor": "Item Color",
+        "containerColor": "Container Color",
+        "cancel": "Cancel",
+        "save": "Save Settings"
+      },
+      "main": {
+        "sceneName": "Enter scene name",
+        "saveScene": "Save Scene",
+        "itemConfig": "Item Configuration",
+        "itemDimensions": "Item Dimensions (mm)",
+        "arrangement": "Arrangement",
+        "containerGaps": "Container Gaps",
+        "xAxis": "X Axis",
+        "yAxis": "Y Axis",
+        "zAxis": "Z Axis",
+        "rows": "Rows",
+        "columns": "Columns",
+        "layers": "Layers",
+        "width": "Width",
+        "height": "Height",
+        "depth": "Depth",
+        "itemGaps": "Item Gaps",
+        "updateVisualization": "Update Visualization",
+        "savedItems": "Saved Items",
+        "settings": "Settings",
+        "downloadImage": "Download Image",
+        "downloadScene": "Download Scene",
+        "size": "Size",
+        "layout": "Layout",
+        "load": "Load",
+        "delete": "Delete"
+      },
+      "units": {
+        "mm": "Millimeters (mm)",
+        "cm": "Centimeters (cm)"
+      },
+      "stats": {
+        "packingStats": "Packing Statistics",
+        "baseItemDimensions": "Base Item Dimensions",
+        "effectiveItemDimensions": "Effective Item Dimensions",
+        "innerContainerDimensions": "Inner Container Dimensions",
+        "outerContainerDimensions": "Outer Container Dimensions",
+        "containerGaps": "Container Gaps",
+        "itemGaps": "Item Gaps",
+        "totalItems": "Total Items"
+      }
+    },
+    "he": {
+      "title": "הדמיית אריזה תלת מימדית",
+      "settings": {
+        "title": "הגדרות",
+        "language": "שפה",
+        "defaultUnit": "יחידת ברירת מחדל",
+        "surfaceDimensions": "מימדי משטח (מ״מ)",
+        "width": "רוחב",
+        "height": "גובה",
+        "depth": "עומק",
+        "colors": "צבעים",
+        "itemColor": "צבע פריט",
+        "containerColor": "צבע מיכל",
+        "cancel": "ביטול",
+        "save": "שמור הגדרות"
+      },
+      "main": {
+        "sceneName": "הזן שם סצנה",
+        "saveScene": "שמור סצנה",
+        "itemConfig": "הגדרות פריט",
+        "itemDimensions": "מימדי פריט (מ״מ)",
+        "arrangement": "סידור",
+        "containerGaps": "רווחי מיכל",
+        "xAxis": "ציר X",
+        "yAxis": "ציר Y",
+        "zAxis": "ציר Z",
+        "rows": "שורות",
+        "columns": "עמודות",
+        "layers": "שכבות",
+        "width": "רוחב",
+        "height": "גובה",
+        "depth": "עומק",
+        "itemGaps": "רווחי פריט",
+        "updateVisualization": "עדכן הדמיה",
+        "savedItems": "פריטים שמורים",
+        "settings": "הגדרות",
+        "downloadImage": "הורד תמונה",
+        "downloadScene": "הורד סצנה",
+        "size": "גודל",
+        "layout": "פריסה",
+        "load": "טען",
+        "delete": "מחק"
+      },
+      "units": {
+        "mm": "מילימטרים (מ״מ)",
+        "cm": "סנטימטרים (ס״מ)"
+      },
+      "stats": {
+        "packingStats": "נתוני אריזה",
+        "baseItemDimensions": "מימדי פריט בסיס",
+        "effectiveItemDimensions": "מימדי פריט אפקטיביים",
+        "innerContainerDimensions": "מימדי מיכל פנימי",
+        "outerContainerDimensions": "מימדי מיכל חיצוני",
+        "containerGaps": "רווחי מיכל",
+        "itemGaps": "רווחי פריט",
+        "totalItems": "סה״כ פריטים"
+      }
+    }
+  }

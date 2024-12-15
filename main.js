@@ -2,7 +2,7 @@
 
 const loadSettings = () => {
     const defaultSettings = {
-        language: 'en',
+        language: 'he',
         defaultUnit: 'mm',
         surfaceWidth: 1000,
         surfaceDepth: 1200,
@@ -608,36 +608,38 @@ class PackingVisualizer {
 
     addDimensionLinesWithGaps(dimensions, gaps) {
         const { width, depth, height } = dimensions;
+        const unit = this.getUnitString();
+        
+        const formatDimensionText = (value, dimensionKey) => {
+            const formattedValue = this.convertUnit(value).toFixed(1);
+            return `${window.translationManager.translate(dimensionKey)}: ${formattedValue}${unit}`;
+        };
         
         // Add arrows for total dimensions
-        this.addArrowWithLabel(`Width: ${width.toFixed(1)}mm`, 
+        this.addArrowWithLabel(
+            formatDimensionText(width, 'settings.width'),
             new THREE.Vector3(0, -50, depth),
             new THREE.Vector3(width, -50, depth),
             0xff0000,
-            dimensions  // Pass dimensions here
+            dimensions
         );
     
-        this.addArrowWithLabel(`Height: ${height.toFixed(1)}mm`,
+        this.addArrowWithLabel(
+            formatDimensionText(height, 'settings.height'),
             new THREE.Vector3(-50, 0, depth),
             new THREE.Vector3(-50, height, depth),
             0x00ff00,
-            dimensions  // Pass dimensions here
+            dimensions
         );
     
-        this.addArrowWithLabel(`Depth: ${depth.toFixed(1)}mm`,
+        this.addArrowWithLabel(
+            formatDimensionText(depth, 'settings.depth'),
             new THREE.Vector3(0, -50, 0),
             new THREE.Vector3(0, -50, depth),
             0x0000ff,
-            dimensions  // Pass dimensions here
+            dimensions
         );
-    
-        // Add gap labels
-        // this.addLabel(`Gap: ${gaps.x}mm`, new THREE.Vector3(0, height/2, depth + 50), dimensions);
-        // this.addLabel(`Gap: ${gaps.y}mm`, new THREE.Vector3(-100, height/2, depth), dimensions);
-        // this.addLabel(`Gap: ${gaps.z}mm`, new THREE.Vector3(width/2, -100, depth/2), dimensions);
     }
-    
-
 
     addDimensionLabel(text, position) {
         const canvas = document.createElement('canvas');
@@ -676,66 +678,69 @@ class PackingVisualizer {
         if (!statsDiv) {
             statsDiv = document.createElement('div');
             statsDiv.id = 'packingStats';
-            statsDiv.className = 'bg-white p-4 rounded-lg shadow-md mt-4';
+            statsDiv.className = 'bg-white p-8 rounded-lg shadow-md mt-4';
             document.querySelector('#container').insertAdjacentElement('afterend', statsDiv);
         }
     
         statsDiv.innerHTML = `
-            <h3 class="font-bold text-lg mb-2">Packing Statistics</h3>
+            <h3 class="font-bold text-lg mb-2" data-translate="stats.packingStats">Packing Statistics</h3>
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <p><strong>Base Item Dimensions:</strong></p>
+                    <p><strong data-translate="stats.baseItemDimensions">Base Item Dimensions</strong></p>
                     <ul class="list-disc pl-5">
-                        <li>Width: ${formatValue(item.width)}</li>
-                        <li>Depth: ${formatValue(item.depth)}</li>
-                        <li>Height: ${formatValue(item.height)}</li>
+                        <li><span data-translate="settings.width">Width</span>: ${formatValue(item.width)}</li>
+                        <li><span data-translate="settings.depth">Depth</span>: ${formatValue(item.depth)}</li>
+                        <li><span data-translate="settings.height">Height</span>: ${formatValue(item.height)}</li>
                     </ul>
                 </div>
                 <div>
-                    <p><strong>Effective Item Dimensions:</strong></p>
+                    <p><strong data-translate="stats.effectiveItemDimensions">Effective Item Dimensions</strong></p>
                     <ul class="list-disc pl-5">
-                        <li>Width: ${formatValue(effectiveItem.width)}</li>
-                        <li>Depth: ${formatValue(effectiveItem.depth)}</li>
-                        <li>Height: ${formatValue(effectiveItem.height)}</li>
+                        <li><span data-translate="settings.width">Width</span>: ${formatValue(effectiveItem.width)}</li>
+                        <li><span data-translate="settings.depth">Depth</span>: ${formatValue(effectiveItem.depth)}</li>
+                        <li><span data-translate="settings.height">Height</span>: ${formatValue(effectiveItem.height)}</li>
                     </ul>
                 </div>
                 <div>
-                    <p><strong>Inner Container Dimensions:</strong></p>
+                    <p><strong data-translate="stats.innerContainerDimensions">Inner Container Dimensions</strong></p>
                     <ul class="list-disc pl-5">
-                        <li>Width: ${formatValue(inner.width)}</li>
-                        <li>Depth: ${formatValue(inner.depth)}</li>
-                        <li>Height: ${formatValue(inner.height)}</li>
+                        <li><span data-translate="settings.width">Width</span>: ${formatValue(inner.width)}</li>
+                        <li><span data-translate="settings.depth">Depth</span>: ${formatValue(inner.depth)}</li>
+                        <li><span data-translate="settings.height">Height</span>: ${formatValue(inner.height)}</li>
                     </ul>
                 </div>
                 <div>
-                    <p><strong>Outer Container Dimensions:</strong></p>
+                    <p><strong data-translate="stats.outerContainerDimensions">Outer Container Dimensions</strong></p>
                     <ul class="list-disc pl-5">
-                        <li>Width: ${formatValue(outer.width)}</li>
-                        <li>Depth: ${formatValue(outer.depth)}</li>
-                        <li>Height: ${formatValue(outer.height)}</li>
+                        <li><span data-translate="settings.width">Width</span>: ${formatValue(outer.width)}</li>
+                        <li><span data-translate="settings.depth">Depth</span>: ${formatValue(outer.depth)}</li>
+                        <li><span data-translate="settings.height">Height</span>: ${formatValue(outer.height)}</li>
                     </ul>
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-4 mt-2">
                 <div>
-                    <p><strong>Container Gaps:</strong></p>
+                    <p><strong data-translate="stats.containerGaps">Container Gaps</strong></p>
                     <ul class="list-disc pl-5">
-                        <li>X (Width): ${formatValue(containerGaps.x)}</li>
-                        <li>Y (Height): ${formatValue(containerGaps.y)}</li>
-                        <li>Z (Depth): ${formatValue(containerGaps.z)}</li>
+                        <li><span data-translate="main.xAxis">X Axis</span>: ${formatValue(containerGaps.x)}</li>
+                        <li><span data-translate="main.yAxis">Y Axis</span>: ${formatValue(containerGaps.y)}</li>
+                        <li><span data-translate="main.zAxis">Z Axis</span>: ${formatValue(containerGaps.z)}</li>
                     </ul>
                 </div>
                 <div>
-                    <p><strong>Item Gaps:</strong></p>
+                    <p><strong data-translate="stats.itemGaps">Item Gaps</strong></p>
                     <ul class="list-disc pl-5">
-                        <li>X (Width): ${formatValue(itemGaps.x)}</li>
-                        <li>Y (Height): ${formatValue(itemGaps.y)}</li>
-                        <li>Z (Depth): ${formatValue(itemGaps.z)}</li>
+                        <li><span data-translate="main.xAxis">X Axis</span>: ${formatValue(itemGaps.x)}</li>
+                        <li><span data-translate="main.yAxis">Y Axis</span>: ${formatValue(itemGaps.y)}</li>
+                        <li><span data-translate="main.zAxis">Z Axis</span>: ${formatValue(itemGaps.z)}</li>
                     </ul>
                 </div>
             </div>
-            <p class="mt-2"><strong>Total Items:</strong> ${totalItems}</p>
+            <p class="mt-2"><strong data-translate="stats.totalItems">Total Items</strong>: ${totalItems}</p>
         `;
+    
+        // Trigger translation update for the new content
+        window.translationManager.updatePageTranslations();
     }
 
 
@@ -807,6 +812,7 @@ class PackingVisualizer {
 class SettingsManager {
     constructor() {
         this.settings = loadSettings();
+        this.translationManager = new TranslationManager();
         this.setupEventListeners();
     }
 
@@ -833,6 +839,9 @@ class SettingsManager {
             };
             saveSettings(newSettings);
         });
+        document.getElementById('language').addEventListener('change', (e) => {
+            this.translationManager.setLanguage(e.target.value);
+        });
     }
 
     populateSettingsForm() {
@@ -855,7 +864,10 @@ class SceneManager {
     }
 
     loadScenes() {
-        return JSON.parse(localStorage.getItem('packingVisualizerScenes') || '{}');
+        const exampleScenes = '{"פריט לדוגמה":{"itemWidth":"95","itemDepth":"160","itemHeight":"55","rows":"3","columns":"3","layers":"3","containerGapX":"5","containerGapY":"5","containerGapZ":"5","itemGapX":"1","itemGapY":"1","itemGapZ":"1","settings":{"itemColor":"#4287f5","containerColor":"#bc9166","surfaceWidth":1000,"surfaceDepth":1200,"defaultUnit":"mm","language":"he"}}}'
+        const sceneData = Object.keys(JSON.parse(localStorage.getItem('packingVisualizerScenes')) || {});
+        const sceneDataLength = Object.keys(sceneData || {}).length;
+        return (sceneDataLength ? sceneData : JSON.parse(exampleScenes));
     }
 
     setupEventListeners() {
@@ -1008,14 +1020,14 @@ class SceneManager {
                     <span class="font-medium">${name}</span>
                     <div class="text-xs text-gray-500 mt-1">
                         ${settings.defaultUnit || 'mm'} | 
-                        Size: ${data.itemWidth}×${data.itemDepth}×${data.itemHeight} | 
-                        Layout: ${data.rows}×${data.columns}×${data.layers}
+                        <span data-translate="main.size">Size</span>: ${data.itemWidth}×${data.itemDepth}×${data.itemHeight} | 
+                        <span data-translate="main.layout">Layout</span>: ${data.rows}×${data.columns}×${data.layers}
                     </div>
                 </div>
                 <div class="flex space-x-2">
-                    <button class="load-scene text-blue-600 hover:text-blue-800">Load</button>
-                    <button class="delete-scene text-red-600 hover:text-red-800">Delete</button>
+                    <button class="load-scene text-blue-600 hover:text-blue-800" data-translate="main.load">Load</button>
                 </div>
+                <button class="delete-scene text-red-600 hover:text-red-800" data-translate="main.delete">Delete</button>
             `;
             
             const loadBtn = itemDiv.querySelector('.load-scene');
@@ -1025,6 +1037,134 @@ class SceneManager {
             deleteBtn.addEventListener('click', () => this.handleSceneDelete(name));
             
             savedItemsContainer.appendChild(itemDiv);
+        });
+    
+        // Trigger translation update for the new content
+        window.translationManager.updatePageTranslations();
+    }
+}
+
+class TranslationManager {
+    constructor() {
+        this.translations = null;
+        this.currentSettings = loadSettings();
+        this.currentLanguage = this.currentSettings.language || 'en';
+        this.loadTranslations();
+    }
+
+    async loadTranslations() {
+        try {
+            const response = await fetch('/translations.json');
+            this.translations = await response.json();
+            this.updatePageTranslations();
+        } catch (error) {
+            console.error('Failed to load translations:', error);
+        }
+    }
+
+    setLanguage(language) {
+        if (this.translations && this.translations[language]) {
+            this.currentLanguage = language;
+            localStorage.setItem('packingVisualizerLanguage', language);
+            this.updatePageTranslations();
+            // Update document direction for RTL support
+            document.documentElement.dir = language === 'he' ? 'rtl' : 'ltr';
+            return true;
+        }
+        return false;
+    }
+
+    translate(key) {
+        if (!this.translations || !this.currentLanguage) return key;
+        
+        const keys = key.split('.');
+        let value = this.translations[this.currentLanguage];
+        
+        for (const k of keys) {
+            if (!value || !value[k]) return key;
+            value = value[k];
+        }
+        
+        return value;
+    }
+
+    updatePageTranslations() {
+        // Update all elements with data-translate attribute
+        document.querySelectorAll('[data-translate]').forEach(element => {
+            const key = element.getAttribute('data-translate');
+            const translatedText = this.translate(key);
+            element.textContent = translatedText;
+        });
+
+        // Update all placeholders with data-translate-placeholder attribute
+        document.querySelectorAll('[data-translate-placeholder]').forEach(element => {
+            const key = element.getAttribute('data-translate-placeholder');
+            const translatedText = this.translate(key);
+            element.placeholder = translatedText;
+        });
+
+        // Update document title
+        const titleElement = document.querySelector('title[data-translate]');
+        if (titleElement) {
+            document.title = this.translate(titleElement.getAttribute('data-translate'));
+        }
+
+        // Update units in selects
+        const unitSelect = document.getElementById('defaultUnit');
+        if (unitSelect) {
+            Array.from(unitSelect.options).forEach(option => {
+                const key = option.getAttribute('data-translate');
+                if (key) {
+                    option.text = this.translate(key);
+                }
+            });
+        }
+
+        // Update stats section if it exists
+        this.updateStatsSection();
+    }
+
+    updateStatsSection() {
+        const statsDiv = document.getElementById('packingStats');
+        if (!statsDiv) return;
+
+        // Update main stats title
+        const statsTitle = statsDiv.querySelector('h3');
+        if (statsTitle) {
+            statsTitle.textContent = this.translate('stats.packingStats');
+        }
+
+        // Update section titles
+        const sections = {
+            'baseItemDimensions': 'stats.baseItemDimensions',
+            'effectiveItemDimensions': 'stats.effectiveItemDimensions',
+            'innerContainerDimensions': 'stats.innerContainerDimensions',
+            'outerContainerDimensions': 'stats.outerContainerDimensions',
+            'containerGaps': 'stats.containerGaps',
+            'itemGaps': 'stats.itemGaps'
+        };
+
+        Object.entries(sections).forEach(([className, translationKey]) => {
+            const sectionTitle = statsDiv.querySelector(`[data-section="${className}"]`);
+            if (sectionTitle) {
+                sectionTitle.textContent = this.translate(translationKey);
+            }
+        });
+
+        // Update total items text
+        const totalItemsElement = statsDiv.querySelector('[data-total-items]');
+        if (totalItemsElement) {
+            const totalItems = totalItemsElement.getAttribute('data-total-items');
+            totalItemsElement.textContent = `${this.translate('stats.totalItems')}: ${totalItems}`;
+        }
+    }
+
+    // Helper method to update measurements with current unit
+    updateMeasurements() {
+        document.querySelectorAll('[data-measurement]').forEach(element => {
+            const value = element.getAttribute('data-measurement');
+            const unit = this.translate('units.' + this.currentUnit);
+            element.textContent = `${value} ${unit}`;
         });
     }
 }
@@ -1147,6 +1287,7 @@ class PackingApp {
     }
 }
 
+window.translationManager = new TranslationManager();
 // Initialize the application when the page loads
 window.addEventListener('DOMContentLoaded', () => {
     new PackingApp();

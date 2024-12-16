@@ -2,9 +2,9 @@ const CACHE_VERSION = 'v1.0.2'; // Increment this when you update your app
 const CACHE_NAME = `packing-visualizer-${CACHE_VERSION}`;
 const urlsToCache = [
     '/',
-    '/index.html',
-    '/main.js',
-    '/manifest.json',
+    'index.html',
+    'main.js',
+    'manifest.json',
     'https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css',
     'https://unpkg.com/three@0.159.0/build/three.module.js',
     'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js',
@@ -79,7 +79,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('message', event => {
     if (event.data === 'checkForUpdates') {
         // Check version.json for updates
-        fetch('/version.json', { cache: 'no-cache' })
+        fetch('version.json', { cache: 'no-cache' })
             .then(response => response.json())
             .then(data => {
                 if (data.version !== CACHE_VERSION) {

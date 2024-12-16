@@ -1286,9 +1286,75 @@ class PackingApp {
         }
     }
 }
+class UpdateManager {
+    constructor() {
+        this.registerServiceWorker();
+        this.checkForUpdates();
+    }
+
+    registerServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(registration => {
+                    console.log('ServiceWorker registration successful');
+                    this.setupUpdateListener(registration);
+                })
+                .catch(error => {
+                    console.error('ServiceWorker registration failed:', error);
+                });
+        }
+    }
+
+    setupUpdateListener(registration) {
+        // Listen for messages from the service worker
+        navigator.serviceWorker.addEventListener('message', event => {
+            if (event.data.type === 'updateAvailable') {
+                this.showUpdateNotification();
+            }
+        });
+
+        // Check for updates when the service worker is activated
+        registration.addEventListener('activate', () => {
+            this.checkForUpdates();
+        });
+    }
+
+    checkForUpdates() {
+        if (navigator.serviceWorker.controller) {
+            // Check every hour
+            setInterval(() => {
+                navigator.serviceWorker.controller.postMessage('checkForUpdates');
+            }, 3600000);
+            
+            // Also check immediately
+            navigator.serviceWorker.controller.postMessage('checkForUpdates');
+        }
+    }
+
+    showUpdateNotification() {
+        const notification = document.createElement('div');
+        notification.className = 'fixed bottom-4 right-4 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50';
+        notification.innerHTML = `
+            <div class="flex items-center gap-4">
+                <span>A new version is available!</span>
+                <button id="updateNow" 
+                        class="bg-white text-blue-600 px-4 py-2 rounded hover:bg-blue-50">
+                    Update Now
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        document.getElementById('updateNow').addEventListener('click', () => {
+            window.location.reload();
+        });
+    }
+}
 
 window.translationManager = new TranslationManager();
 // Initialize the application when the page loads
 window.addEventListener('DOMContentLoaded', () => {
+    new UpdateManager();
     new PackingApp();
 });

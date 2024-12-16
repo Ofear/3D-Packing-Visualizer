@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.0.1'; // Increment this when you update your app
+const CACHE_VERSION = 'v1.0.2'; // Increment this when you update your app
 const CACHE_NAME = `packing-visualizer-${CACHE_VERSION}`;
 const urlsToCache = [
     '/',

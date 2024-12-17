@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.0.2'; // Increment this when you update your app
+const CACHE_VERSION = '1.0.3'; // Increment this when you update your app
 const CACHE_NAME = `packing-visualizer-${CACHE_VERSION}`;
 const urlsToCache = [
     '.',
@@ -78,10 +78,10 @@ self.addEventListener('activate', event => {
 // Handle update checking
 self.addEventListener('message', event => {
     if (event.data === 'checkForUpdates') {
-        // Check version.json for updates
         fetch('version.json', { cache: 'no-cache' })
             .then(response => response.json())
             .then(data => {
+                console.log("data:", data);
                 if (data.version !== CACHE_VERSION) {
                     // Notify all clients about the update
                     self.clients.matchAll().then(clients => {

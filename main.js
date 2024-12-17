@@ -75,37 +75,82 @@ class PackingCalculator {
         return warnings;
     }
 
-    calculateContainer(itemDimensions, arrangement, containerGaps, itemGaps) {
-        const { width, depth, height } = itemDimensions;
+    calculateRotatedDimensions(dimensions, rotation) {
+        const { width, depth, height } = dimensions;
+        const { x, y, z } = rotation;
+        
+        // Convert degrees to radians
+        const xRad = (x * Math.PI) / 180;
+        const yRad = (y * Math.PI) / 180;
+        const zRad = (z * Math.PI) / 180;
+        
+        // Create rotation matrices and apply them
+        const rotatedDimensions = {
+            width: width,
+            height: height,
+            depth: depth
+        };
+        
+        // Apply X rotation
+        if (x === 90 || x === 270) {
+            const tempHeight = rotatedDimensions.height;
+            rotatedDimensions.height = rotatedDimensions.depth;
+            rotatedDimensions.depth = tempHeight;
+        }
+        
+        // Apply Y rotation
+        if (y === 90 || y === 270) {
+            const tempWidth = rotatedDimensions.width;
+            rotatedDimensions.width = rotatedDimensions.depth;
+            rotatedDimensions.depth = tempWidth;
+        }
+        
+        // Apply Z rotation
+        if (z === 90 || z === 270) {
+            const tempWidth = rotatedDimensions.width;
+            rotatedDimensions.width = rotatedDimensions.height;
+            rotatedDimensions.height = tempWidth;
+        }
+        
+        return rotatedDimensions;
+    }
+
+    calculateContainer(itemDimensions, arrangement, containerGaps, itemGaps, rotation = { x: 0, y: 0, z: 0 }) {
+        // Get rotated dimensions
+        const rotatedDimensions = this.calculateRotatedDimensions(itemDimensions, rotation);
+        
+        // Use rotated dimensions for the rest of the calculations
+        const { width, depth, height } = rotatedDimensions;
+    
         const { rows, columns, layers } = arrangement;
         const { x: containerGapX, y: containerGapY, z: containerGapZ } = containerGaps;
         const { x: itemGapX, y: itemGapY, z: itemGapZ } = itemGaps;
-
+    
         // Calculate effective item dimensions (including item gaps)
         const effectiveItemWidth = width + (2 * itemGapX);
         const effectiveItemHeight = height + (2 * itemGapY);
         const effectiveItemDepth = depth + (2 * itemGapZ);
-
+    
         // Calculate inner container dimensions (with item gaps)
         const innerWidth = effectiveItemWidth * columns;
         const innerDepth = effectiveItemDepth * rows;
         const innerHeight = effectiveItemHeight * layers;
-
+    
         // Calculate outer container dimensions (with container gaps)
         const containerWidth = innerWidth + (2 * containerGapX);
         const containerDepth = innerDepth + (2 * containerGapZ);
         const containerHeight = innerHeight + (2 * containerGapY);
-
+    
         // Check surface constraints
         const exceedsSurface = containerWidth > this.surfaceWidth || 
                              containerDepth > this.surfaceDepth;
-
+    
         return {
             dimensions: {
                 item: {
-                    width,
-                    depth,
-                    height
+                    width: itemDimensions.width,  // Original dimensions for item creation
+                    depth: itemDimensions.depth,
+                    height: itemDimensions.height
                 },
                 effectiveItem: {
                     width: effectiveItemWidth,
@@ -128,6 +173,7 @@ class PackingCalculator {
             exceedsSurface,
             totalItems: rows * columns * layers,
             arrangement,
+            rotation,  // Include rotation in the result
             warnings: exceedsSurface ? 
                 [`Container exceeds surface area of ${this.surfaceWidth}mm x ${this.surfaceDepth}mm`] : 
                 []
@@ -219,11 +265,11 @@ class PackingVisualizer {
         controlsDiv.className = 'absolute top-4 right-4 flex gap-2'; // Changed to flex for multiple buttons
         controlsDiv.innerHTML = `
             <select id="unitToggle" class="bg-white border rounded px-2 py-1">
-                <option value="mm">Millimeters (mm)</option>
-                <option value="cm">Centimeters (cm)</option>
+                <option data-translate="units.mm" value="mm">Millimeters (mm)</option>
+                <option data-translate="units.cm" value="cm">Centimeters (cm)</option>
             </select>
             <button id="centerView" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
-                Center View
+                <span data-translate="main.centerView">Center View</span>
             </button>
         `;
         this.container.style.position = 'relative';
@@ -469,13 +515,53 @@ class PackingVisualizer {
         const midpoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
         midpoint.y -= dimensions.height / 20; // Scale offset with container height
         this.addLabel(text, midpoint, dimensions);
-    }    
-
+    }
+    
+    createItem(dimensions, position, rotation) {
+        const { width, height, depth } = dimensions;
+        const geometry = new THREE.BoxGeometry(width, height, depth);
+        const material = new THREE.MeshPhongMaterial({
+            color: new THREE.Color(this.itemColor),
+            transparent: true,
+            opacity: 0.8,
+            side: THREE.DoubleSide
+        });
+        
+        const item = new THREE.Mesh(geometry, material);
+        
+        // Create a group to handle rotations properly
+        const itemGroup = new THREE.Group();
+        itemGroup.add(item);
+        
+        // Create wireframe outline
+        const edgesGeometry = new THREE.EdgesGeometry(geometry);
+        const edgesMaterial = new THREE.LineBasicMaterial({ 
+            color: 0x000000, 
+            linewidth: 2,
+            side: THREE.DoubleSide
+        });
+        const wireframe = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+        itemGroup.add(wireframe);
+        
+        // Center the item at origin before rotation
+        item.position.set(width/2, height/2, depth/2);
+        wireframe.position.copy(item.position);
+        
+        // Apply rotations to the group
+        itemGroup.rotation.x = (rotation.x * Math.PI);
+        itemGroup.rotation.y = (rotation.y * Math.PI);
+        itemGroup.rotation.z = (rotation.z * Math.PI);
+        // Move the group to final position after rotation
+        itemGroup.position.set(position.x, position.y, position.z);
+        
+        return itemGroup;
+    }
+    
     updateVisualization(packingResult) {
         this.lastPackingResult = packingResult;
         this.clearItems();
-        const { dimensions, containerGaps, itemGaps } = packingResult;
-        const { inner, outer } = dimensions;
+        const { dimensions, containerGaps, itemGaps, arrangement, rotation } = packingResult;
+        const { inner, outer, item } = dimensions;
     
         // Create outer container with configured color
         const outerGeometry = new THREE.BoxGeometry(
@@ -496,7 +582,7 @@ class PackingVisualizer {
         const outerContainer = new THREE.Mesh(outerGeometry, outerMaterial);
         outerContainer.position.set(outer.width/2, outer.height/2, outer.depth/2);
         this.scene.add(outerContainer);
-
+    
         // Create the outline for the outer container
         const outerEdgesGeometry = new THREE.EdgesGeometry(outerGeometry);
         const outerEdgesMaterial = new THREE.LineBasicMaterial({
@@ -507,31 +593,8 @@ class PackingVisualizer {
         outerWireframe.position.copy(outerContainer.position);
         this.scene.add(outerWireframe);
     
-        // Create inner container
-        const innerGeometry = new THREE.BoxGeometry(
-            inner.width, 
-            inner.height, 
-            inner.depth
-        );
-        const innerMaterial = new THREE.MeshBasicMaterial({
-            color: new THREE.Color(this.containerColor),
-            transparent: true,
-            opacity: 0,
-            wireframe: false,
-            side: THREE.DoubleSide,
-            depthWrite: false,
-            depthTest: true,
-        });
-        const innerContainer = new THREE.Mesh(innerGeometry, innerMaterial);
-        innerContainer.position.set(
-            outer.width/2,
-            outer.height/2,
-            outer.depth/2
-        );
-        this.scene.add(innerContainer);
-    
-        // Add items with the correct offset (gap)
-        const { rows, columns, layers } = packingResult.arrangement;
+        // Create items with the correct offset (gap)
+        const { rows, columns, layers } = arrangement;
         const itemWidth = inner.width / columns;
         const itemHeight = inner.height / layers;
         const itemDepth = inner.depth / rows;
@@ -545,19 +608,27 @@ class PackingVisualizer {
         for (let layer = 0; layer < layers; layer++) {
             for (let row = 0; row < rows; row++) {
                 for (let col = 0; col < columns; col++) {
-                    const itemGroup = this.createItemWithOutline(
-                        itemWidth - (2 * itemGaps.x),
-                        itemHeight - (2 * itemGaps.y),
-                        itemDepth - (2 * itemGaps.z)
+                    const position = {
+                        x: startX + (col * itemWidth),
+                        y: startY + (layer * itemHeight),
+                        z: startZ + (row * itemDepth)
+                    };
+                    const itemRotation = {
+                        x: Number(rotation.x || 0),
+                        y: Number(rotation.y || 0),
+                        z: Number(rotation.z || 0)
+                    };
+                    const itemMesh = this.createItem(
+                        {
+                            width: itemWidth - (2 * itemGaps.x),
+                            height: itemHeight - (2 * itemGaps.y),
+                            depth: itemDepth - (2 * itemGaps.z)
+                        },
+                        position,
+                        itemRotation
                     );
                     
-                    itemGroup.position.set(
-                        startX + (col * itemWidth) + (itemWidth/2),
-                        startY + (layer * itemHeight) + (itemHeight/2),
-                        startZ + (row * itemDepth) + (itemDepth/2)
-                    );
-                    
-                    this.scene.add(itemGroup);
+                    this.scene.add(itemMesh);
                 }
             }
         }
@@ -571,6 +642,97 @@ class PackingVisualizer {
         this.camera.lookAt(outer.width/2, outer.height/2, outer.depth/2);
         this.controls.target.set(outer.width/2, outer.height/2, outer.depth/2);
     
+        // Update stats display
+        this.updateStatsDisplay(packingResult);
+    }
+    
+    // Remove the calculator dependency from PackingVisualizer
+    updateVisualization(packingResult) {
+        this.lastPackingResult = packingResult;
+        this.clearItems();
+        const { dimensions, containerGaps, itemGaps, arrangement, rotation } = packingResult;
+        const { inner, outer, item } = dimensions;
+
+        // Create outer container with configured color
+        const outerGeometry = new THREE.BoxGeometry(
+            outer.width, 
+            outer.height, 
+            outer.depth   
+        );
+        const outerMaterial = new THREE.MeshBasicMaterial({
+            color: new THREE.Color(this.containerColor),
+            transparent: true,
+            opacity: 0.3,
+            wireframe: false,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            depthTest: true,
+        });
+        
+        const outerContainer = new THREE.Mesh(outerGeometry, outerMaterial);
+        outerContainer.position.set(outer.width/2, outer.height/2, outer.depth/2);
+        this.scene.add(outerContainer);
+
+        // Create items with the correct offset (gap)
+        const { rows, columns, layers } = arrangement;
+        const itemWidth = inner.width / columns;
+        const itemHeight = inner.height / layers;
+        const itemDepth = inner.depth / rows;
+
+        // Calculate starting position (including gap)
+        const startX = containerGaps.x;
+        const startY = containerGaps.y;
+        const startZ = containerGaps.z;
+
+        // Create items
+        for (let layer = 0; layer < layers; layer++) {
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < columns; col++) {
+                    const position = {
+                        x: startX + (col * itemWidth),
+                        y: startY + (layer * itemHeight),
+                        z: startZ + (row * itemDepth)
+                    };
+                    
+                    const itemMesh = this.createItem(
+                        {
+                            width: itemWidth - (2 * itemGaps.x),
+                            height: itemHeight - (2 * itemGaps.y),
+                            depth: itemDepth - (2 * itemGaps.z)
+                        },
+                        position,
+                        rotation || { x: 0, y: 0, z: 0 }
+                    );
+                    
+                    this.scene.add(itemMesh);
+                }
+            }
+        }
+
+        // Add dimension lines with gaps labeled
+        this.addDimensionLinesWithGaps(outer, containerGaps);
+
+        // Update camera position
+        const maxDimension = Math.max(outer.width, outer.depth, outer.height);
+        const targetDistance = maxDimension * 2;
+        
+        // Get current camera direction vector
+        const direction = new THREE.Vector3();
+        direction.subVectors(this.camera.position, this.controls.target);
+        direction.normalize();
+        
+        // Scale the direction vector by the new distance
+        direction.multiplyScalar(targetDistance);
+        
+        // Add the target position to get the new camera position
+        const newPosition = new THREE.Vector3();
+        newPosition.addVectors(this.controls.target, direction);
+        
+        // Update camera position
+        this.camera.position.copy(newPosition);
+        this.camera.lookAt(outer.width/2, outer.height/2, outer.depth/2);
+        this.controls.target.set(outer.width/2, outer.height/2, outer.depth/2);
+
         // Update stats display
         this.updateStatsDisplay(packingResult);
     }
@@ -612,12 +774,12 @@ class PackingVisualizer {
         
         const formatDimensionText = (value, dimensionKey) => {
             const formattedValue = this.convertUnit(value).toFixed(1);
-            return `${window.translationManager.translate(dimensionKey)}: ${formattedValue}${unit}`;
+            return `${window.translationManager.translate(dimensionKey)}: ${formattedValue} ${window.translationManager.translate(`units.${unit}`)}`;
         };
         
-        // Add arrows for total dimensions
+        // Add arrows with axis labels for total dimensions
         this.addArrowWithLabel(
-            formatDimensionText(width, 'settings.width'),
+            `X: ${formatDimensionText(width, 'settings.width')}`,
             new THREE.Vector3(0, -50, depth),
             new THREE.Vector3(width, -50, depth),
             0xff0000,
@@ -625,7 +787,7 @@ class PackingVisualizer {
         );
     
         this.addArrowWithLabel(
-            formatDimensionText(height, 'settings.height'),
+            `Y: ${formatDimensionText(height, 'settings.height')}`,
             new THREE.Vector3(-50, 0, depth),
             new THREE.Vector3(-50, height, depth),
             0x00ff00,
@@ -633,7 +795,7 @@ class PackingVisualizer {
         );
     
         this.addArrowWithLabel(
-            formatDimensionText(depth, 'settings.depth'),
+            `Z: ${formatDimensionText(depth, 'settings.depth')}`,
             new THREE.Vector3(0, -50, 0),
             new THREE.Vector3(0, -50, depth),
             0x0000ff,
@@ -864,8 +1026,8 @@ class SceneManager {
     }
 
     loadScenes() {
-        const exampleScenes = '{"פריט לדוגמה":{"itemWidth":"95","itemDepth":"160","itemHeight":"55","rows":"3","columns":"3","layers":"3","containerGapX":"5","containerGapY":"5","containerGapZ":"5","itemGapX":"1","itemGapY":"1","itemGapZ":"1","settings":{"itemColor":"#4287f5","containerColor":"#bc9166","surfaceWidth":1000,"surfaceDepth":1200,"defaultUnit":"mm","language":"he"}}}'
-        const sceneData = Object.keys(JSON.parse(localStorage.getItem('packingVisualizerScenes')) || {});
+        const exampleScenes = '{"פריט לדוגמה":{"itemWidth":"95","itemDepth":"160","itemHeight":"55","rows":"3","columns":"3","layers":"3","itemRotationX":"0","itemRotationY":"0","itemRotationZ":"0","containerGapX":"5","containerGapY":"5","containerGapZ":"5","itemGapX":"1","itemGapY":"1","itemGapZ":"1","settings":{"itemColor":"#4287f5","containerColor":"#bc9166","surfaceWidth":1000,"surfaceDepth":1200,"defaultUnit":"mm","language":"he"}}}'
+        const sceneData = JSON.parse(localStorage.getItem('packingVisualizerScenes'));
         const sceneDataLength = Object.keys(sceneData || {}).length;
         return (sceneDataLength ? sceneData : JSON.parse(exampleScenes));
     }
@@ -882,26 +1044,45 @@ class SceneManager {
     }
 
     captureFormData() {
-        const formData = {};
+        let formData = {};
         const formElements = [
             'itemWidth', 'itemDepth', 'itemHeight',
             'rows', 'columns', 'layers',
             'containerGapX', 'containerGapY', 'containerGapZ',
             'itemGapX', 'itemGapY', 'itemGapZ'
         ];
-
+    
         formElements.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
                 formData[id] = element.value;
             }
         });
-
+        formData = {
+            ...formData,
+            itemRotationX: document.getElementById('itemRotationX').dataset.rotation,
+            itemRotationY: document.getElementById('itemRotationY').dataset.rotation,
+            itemRotationZ: document.getElementById('itemRotationZ').dataset.rotation
+        };
+    
         return formData;
     }
 
     populateForm(data) {
         if (!data) return;
+
+        // Handle rotation buttons specially
+        ['X', 'Y', 'Z'].forEach(axis => {
+            const rotationBtn = document.getElementById(`itemRotation${axis}`);
+            if (rotationBtn && data[`itemRotation${axis}`]) {
+                rotationBtn.dataset.rotation = data[`itemRotation${axis}`];
+                const rotationValue = rotationBtn.querySelector('.rotation-value');
+                if (rotationValue) {
+                    rotationValue.textContent = `${data[`itemRotation${axis}`]}°`;
+                }
+                rotationBtn.classList.toggle('bg-blue-100', data[`itemRotation${axis}`] === '90');
+            }
+        });
         
         // Populate form fields
         Object.keys(data).forEach(key => {
@@ -1015,19 +1196,28 @@ class SceneManager {
             
             const settings = data.settings || {};
             
+            // Format rotation display
+            const rotation = {
+                x: data.itemRotationX || '0',
+                y: data.itemRotationY || '0',
+                z: data.itemRotationZ || '0'
+            };
+            const rotationText = `${rotation.x}°,${rotation.y}°,${rotation.z}°`;
+            
             itemDiv.innerHTML = `
                 <div>
                     <span class="font-medium">${name}</span>
                     <div class="text-xs text-gray-500 mt-1">
                         ${settings.defaultUnit || 'mm'} | 
                         <span data-translate="main.size">Size</span>: ${data.itemWidth}×${data.itemDepth}×${data.itemHeight} | 
-                        <span data-translate="main.layout">Layout</span>: ${data.rows}×${data.columns}×${data.layers}
+                        <span data-translate="main.layout">Layout</span>: ${data.rows}×${data.columns}×${data.layers} |
+                        <span data-translate="main.rotation">Rotation</span>: ${rotationText}
                     </div>
                 </div>
                 <div class="flex space-x-2">
                     <button class="load-scene text-blue-600 hover:text-blue-800" data-translate="main.load">Load</button>
+                    <button class="delete-scene text-red-600 hover:text-red-800" data-translate="main.delete">Delete</button>
                 </div>
-                <button class="delete-scene text-red-600 hover:text-red-800" data-translate="main.delete">Delete</button>
             `;
             
             const loadBtn = itemDiv.querySelector('.load-scene');
@@ -1192,8 +1382,28 @@ class PackingApp {
             this.updatePacking();
         });
 
+        // Add auto-update for arrangement inputs
+        ['rows', 'columns', 'layers'].forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('change', () => {
+                    form.dispatchEvent(new Event('submit'));
+                });
+            }
+        });
+
         document.getElementById('downloadImage').addEventListener('click', () => this.downloadImage());
         document.getElementById('downloadScene').addEventListener('click', () => this.downloadScene());
+        document.querySelectorAll('[id^="itemRotation"]').forEach(button => {
+            button.addEventListener('click', function() {
+                // Update the displayed value
+                const rotationValue = this.querySelector('.rotation-value');
+                rotationValue.textContent = `${this.dataset.rotation}°`;
+                
+                // Trigger form update
+                document.getElementById('packingForm').dispatchEvent(new Event('submit'));
+            });
+        });
     }
 
     updatePacking() {
@@ -1201,6 +1411,12 @@ class PackingApp {
             width: Number(document.getElementById('itemWidth').value),
             depth: Number(document.getElementById('itemDepth').value),
             height: Number(document.getElementById('itemHeight').value)
+        };
+
+        const rotation = {
+            x: Number(document.getElementById('itemRotationX').dataset.rotation || 0),
+            y: Number(document.getElementById('itemRotationY').dataset.rotation || 0),
+            z: Number(document.getElementById('itemRotationZ').dataset.rotation || 0)
         };
 
         const arrangement = {
@@ -1226,13 +1442,15 @@ class PackingApp {
             itemDimensions, 
             arrangement, 
             containerGaps,
-            itemGaps
+            itemGaps,
+            rotation
         );
         
-        // Update warnings
+        // Add rotation to the packing result
+        packingResult.rotation = rotation;
+        
+        // Update warnings and visualization
         this.updateWarnings(packingResult.warnings);
-
-        // Update visualization
         this.visualizer.updateVisualization(packingResult);
     }
 

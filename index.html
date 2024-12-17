@@ -124,7 +124,35 @@
                             </div>
                         </div>
                     </div>
-                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1" data-translate="main.itemRotation">Item Rotation</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <button id="itemRotationX" 
+                                        class="w-full p-2 border rounded bg-white hover:bg-gray-100 transition-colors" 
+                                        data-rotation="0" 
+                                        onclick="this.dataset.rotation = this.dataset.rotation === '0' ? '90' : '0'; this.classList.toggle('bg-blue-100');">
+                                    <span data-translate="main.xAxis_rotation">X</span><span class="hidden rotation-value">0°</span>
+                                </button>
+                            </div>
+                            <div>
+                                <button id="itemRotationY" 
+                                        class="w-full p-2 border rounded bg-white hover:bg-gray-100 transition-colors" 
+                                        data-rotation="0" 
+                                        onclick="this.dataset.rotation = this.dataset.rotation === '0' ? '90' : '0'; this.classList.toggle('bg-blue-100');">
+                                    <span data-translate="main.yAxis_rotation">Y</span><span class="hidden rotation-value">0°</span>
+                                </button>
+                            </div>
+                            <div>
+                                <button id="itemRotationZ" 
+                                        class="w-full p-2 border rounded bg-white hover:bg-gray-100 transition-colors" 
+                                        data-rotation="0" 
+                                        onclick="this.dataset.rotation = this.dataset.rotation === '0' ? '90' : '0'; this.classList.toggle('bg-blue-100');">
+                                    <span data-translate="main.zAxis_rotation">Z</span><span class="hidden rotation-value">0°</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                     <div>
                         <label class="block text-sm font-medium mb-1" data-translate="main.arrangement">Arrangement</label>
                         <div class="grid grid-cols-3 gap-2">

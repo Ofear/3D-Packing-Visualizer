@@ -29,11 +29,36 @@ const saveSettings = (newSettings) => {
         const activeSceneName = localStorage.getItem('lastActiveScene');
     
         if (activeSceneName) {
-            const savedScenes = JSON.parse(localStorage.getItem('packingVisualizerScenes') || '{}');
+            // Get scenes from localStorage or use the example scenes if empty
+            let savedScenes = JSON.parse(localStorage.getItem('packingVisualizerScenes') || '{}');
             const activeScene = savedScenes[activeSceneName];
-            if (Object.keys(activeScene || {})) {
+
+            // If this is the example scene and it's not in localStorage yet
+            if (!activeScene && activeSceneName === "פריט לדוגמה") {
+                savedScenes = {
+                    "פריט לדוגמה": {
+                        "itemWidth": "95",
+                        "itemDepth": "160",
+                        "itemHeight": "55",
+                        "rows": "3",
+                        "columns": "3",
+                        "layers": "3",
+                        "itemRotationX": "0",
+                        "itemRotationY": "0",
+                        "itemRotationZ": "0",
+                        "containerGapX": "5",
+                        "containerGapY": "5",
+                        "containerGapZ": "5",
+                        "itemGapX": "1",
+                        "itemGapY": "1",
+                        "itemGapZ": "1"
+                    }
+                };
+            }
+
+            if (savedScenes[activeSceneName] || activeSceneName === "פריט לדוגמה") {
                 const fullSceneData = {
-                    ...activeScene,
+                    ...(savedScenes[activeSceneName] || {}),
                     settings: newSettings
                 };
             
@@ -175,8 +200,8 @@ class PackingCalculator {
             arrangement,
             rotation,  // Include rotation in the result
             warnings: exceedsSurface ? 
-                [`Container exceeds surface area of ${this.surfaceWidth}mm x ${this.surfaceDepth}mm`] : 
-                []
+            [`${window.translationManager.translate('warnings.surfaceExceeded')} ${this.surfaceWidth}${window.translationManager.translate('units.mm')} x ${this.surfaceDepth}${window.translationManager.translate('units.mm')}`] : 
+            []
         };
     }
 
@@ -1018,7 +1043,8 @@ class SettingsManager {
 
 // Add Scene Manager class
 class SceneManager {
-    constructor() {
+    constructor(calculator) {
+        this.calculator = calculator;  // Store calculator reference
         this.scenes = this.loadScenes();
         this.setupEventListeners();
         this.updateSavedItemsList();
@@ -1026,10 +1052,36 @@ class SceneManager {
     }
 
     loadScenes() {
-        const exampleScenes = '{"פריט לדוגמה":{"itemWidth":"95","itemDepth":"160","itemHeight":"55","rows":"3","columns":"3","layers":"3","itemRotationX":"0","itemRotationY":"0","itemRotationZ":"0","containerGapX":"5","containerGapY":"5","containerGapZ":"5","itemGapX":"1","itemGapY":"1","itemGapZ":"1","settings":{"itemColor":"#4287f5","containerColor":"#bc9166","surfaceWidth":1000,"surfaceDepth":1200,"defaultUnit":"mm","language":"he"}}}'
-        const sceneData = JSON.parse(localStorage.getItem('packingVisualizerScenes'));
-        const sceneDataLength = Object.keys(sceneData || {}).length;
-        return (sceneDataLength ? sceneData : JSON.parse(exampleScenes));
+        const exampleScenes = {
+            "פריט לדוגמה": {
+                "itemWidth": "95",
+                "itemDepth": "160",
+                "itemHeight": "55",
+                "rows": "3",
+                "columns": "3",
+                "layers": "3",
+                "itemRotationX": "0",
+                "itemRotationY": "0",
+                "itemRotationZ": "0",
+                "containerGapX": "5",
+                "containerGapY": "5",
+                "containerGapZ": "5",
+                "itemGapX": "1",
+                "itemGapY": "1",
+                "itemGapZ": "1",
+                "settings": {
+                    "itemColor": "#4287f5",
+                    "containerColor": "#bc9166",
+                    "surfaceWidth": 1000,
+                    "surfaceDepth": 1200,
+                    "defaultUnit": "mm",
+                    "language": "he"
+                }
+            }
+        };
+    
+        const sceneData = localStorage.getItem('packingVisualizerScenes');
+        return sceneData ? JSON.parse(sceneData) : exampleScenes;
     }
 
     setupEventListeners() {
@@ -1105,7 +1157,7 @@ class SceneManager {
             alert('Please enter a scene name');
             return;
         }
-
+    
         // Get current settings
         const currentSettings = {
             itemColor: document.getElementById('itemColor').value,
@@ -1122,17 +1174,42 @@ class SceneManager {
             settings: currentSettings
         };
         
+        // Update the scenes object
         this.scenes[name] = fullSceneData;
-        localStorage.setItem('packingVisualizerScenes', JSON.stringify(this.scenes));
-        localStorage.setItem('lastActiveScene', name);
-        this.updateSavedItemsList();
+    
+        // Save to localStorage
+        try {
+            localStorage.setItem('packingVisualizerScenes', JSON.stringify(this.scenes));
+            localStorage.setItem('lastActiveScene', name);
+            this.updateSavedItemsList();
+        } catch (error) {
+            console.error('Error saving scene:', error);
+            alert('Failed to save scene. Please try again.');
+        }
     }
 
     handleSceneLoad(name) {
         if (confirm('Loading a new scene will discard any unsaved changes and reload the page. Continue?')) {
-            localStorage.setItem('lastActiveScene', name);
+            const sceneData = this.scenes[name];
+            // First apply settings if they exist
+            if (sceneData.settings) {
+                this.applySettings(sceneData.settings);
+            }
+            
+            // Then populate the form
+            this.populateForm(sceneData);
+            
+            // Update scene name field
             document.getElementById('sceneName').value = name;
-            window.location.reload();
+            
+            // Store as last active scene
+            localStorage.setItem('lastActiveScene', name);
+            
+            // Trigger visualization update
+            const form = document.getElementById('packingForm');
+            if (form) {
+                form.dispatchEvent(new Event('submit'));
+            }
         }
     }
 
@@ -1164,11 +1241,18 @@ class SceneManager {
             language: document.getElementById('language')
         };
 
+        // Apply all settings to DOM elements
         Object.entries(settingElements).forEach(([key, element]) => {
             if (element && settings[key] !== undefined) {
                 element.value = settings[key];
             }
         });
+
+        // Update calculator surface dimensions once
+        if (settings.surfaceWidth !== undefined || settings.surfaceDepth !== undefined) {
+            this.calculator.surfaceWidth = Number(settings.surfaceWidth);
+            this.calculator.surfaceDepth = Number(settings.surfaceDepth);
+        }
     }
 
     handleSceneDelete(name) {
@@ -1371,7 +1455,7 @@ class PackingApp {
             this.settings.settings.itemColor,
             this.settings.settings.containerColor
         );
-        this.sceneManager = new SceneManager();
+        this.sceneManager = new SceneManager(this.calculator);  // Pass calculator here
         this.setupEventListeners();
     }
 
